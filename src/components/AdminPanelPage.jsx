@@ -55,15 +55,7 @@ const SectionHeader = ({ icon, title, description, tone }) => {
   );
 };
 
-const AdminPanelPage = ({
-  guests,
-  onConfirmGuest,
-  onRevertGuest,
-  onDeleteGuest,
-  isLoadingGuests,
-  isSyncingGuests,
-  guestError,
-}) => {
+const AdminPanelPage = ({ guests, onConfirmGuest, onRevertGuest, onDeleteGuest }) => {
   const [selectedFamily, setSelectedFamily] = useState('Todas');
   const [activeView, setActiveView] = useState('pending');
   const [nameQuery, setNameQuery] = useState('');
@@ -151,12 +143,6 @@ const AdminPanelPage = ({
         </div>
 
         <div className="rounded-[40px] border border-boda-verde/20 bg-white/90 p-8 shadow-xl backdrop-blur-sm">
-          {guestError ? (
-            <div className="mb-6 rounded-[24px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-              {guestError}
-            </div>
-          ) : null}
-
           <div className="mb-8 grid gap-4 rounded-[28px] border border-boda-verde/15 bg-boda-crema/50 p-5 lg:grid-cols-[1.3fr_0.8fr_0.7fr] lg:items-end">
             <div>
               <div className="mb-2 flex items-center gap-2 text-boda-oliva-oscuro">
@@ -232,7 +218,6 @@ const AdminPanelPage = ({
             <button
               type="button"
               onClick={exportGuestsToExcel}
-              disabled={isLoadingGuests}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-boda-verde/20 bg-boda-crema/70 px-5 py-3 text-sm font-semibold uppercase tracking-[2px] text-boda-oliva-oscuro transition hover:bg-boda-crema"
             >
               <Download size={16} strokeWidth={1.8} />
@@ -246,13 +231,11 @@ const AdminPanelPage = ({
               <SectionHeader
                 icon={<Clock3 size={18} strokeWidth={1.8} />}
                 title="Lista de espera"
-                description={isSyncingGuests ? 'Sincronizando cambios con el listado compartido...' : 'Solicitudes nuevas que todavía necesitan una decisión del admin.'}
+                description="Solicitudes nuevas que todavía necesitan una decisión del admin."
                 tone="pending"
               />
 
-              {isLoadingGuests ? (
-                <EmptyState text="Cargando invitados compartidos..." />
-              ) : pendingGuests.length === 0 ? (
+              {pendingGuests.length === 0 ? (
                 <EmptyState text="No hay invitados pendientes por confirmar." />
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -294,13 +277,11 @@ const AdminPanelPage = ({
               <SectionHeader
                 icon={<ListChecks size={18} strokeWidth={1.8} />}
                 title="Todos los invitados"
-                description={isSyncingGuests ? 'Sincronizando cambios con el listado compartido...' : 'Vista general compacta con invitados en espera y confirmados, filtrados por familia cuando lo necesites.'}
+                description="Vista general compacta con invitados en espera y confirmados, filtrados por familia cuando lo necesites."
                 tone="confirmed"
               />
 
-              {isLoadingGuests ? (
-                <EmptyState text="Cargando invitados compartidos..." />
-              ) : allGuests.length === 0 ? (
+              {allGuests.length === 0 ? (
                 <EmptyState text="No hay invitados registrados con el filtro actual." />
               ) : (
                 <div className="grid gap-4">

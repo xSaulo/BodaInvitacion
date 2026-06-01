@@ -13,41 +13,16 @@ import ConfirmationSection from './components/ConfirmationSection';
 import AdminAccessButton from './components/AdminAccessButton';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminPanelPage from './components/AdminPanelPage';
-import { createGuestRequest, deleteGuestRequest, fetchGuests, mergeLocalGuestsRequest, updateGuestStatusRequest } from './lib/guestApi';
 import { readLegacyLocalGuests, writeLocalGuests } from './utils/guestStorage';
 
 function App() {
-  const [guests, setGuests] = useState([]);
+  const [guests, setGuests] = useState(() => readLegacyLocalGuests());
   const [view, setView] = useState(() => (window.location.hash === '#admin' ? 'admin' : 'site'));
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [isLoadingGuests, setIsLoadingGuests] = useState(true);
-  const [guestError, setGuestError] = useState('');
-  const [isSyncingGuests, setIsSyncingGuests] = useState(false);
 
   useEffect(() => {
-    const loadGuests = async () => {
-      setIsLoadingGuests(true);
-
-      try {
-        const remoteGuests = await fetchGuests();
-        const localGuests = readLegacyLocalGuests();
-        const shouldMergeLocalGuests = localGuests.length > 0;
-        const nextGuests = shouldMergeLocalGuests
-          ? await mergeLocalGuestsRequest(localGuests)
-          : remoteGuests;
-
-        setGuests(nextGuests);
-        writeLocalGuests(nextGuests);
-        setGuestError('');
-      } catch (error) {
-        setGuestError(error.message || 'No se pudo cargar la lista compartida de invitados.');
-      } finally {
-        setIsLoadingGuests(false);
-      }
-    };
-
-    loadGuests();
-  }, []);
+    writeLocalGuests(guests);
+  }, [guests]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -63,37 +38,32 @@ function App() {
     [guests],
   );
 
-  const applyGuestMutation = async (mutation) => {
-    setIsSyncingGuests(true);
-
-    try {
-      const nextGuests = await mutation();
-      setGuests(nextGuests);
-      writeLocalGuests(nextGuests);
-      setGuestError('');
-      return nextGuests;
-    } catch (error) {
-      setGuestError(error.message || 'No se pudo sincronizar la lista de invitados.');
-      throw error;
-    } finally {
-      setIsSyncingGuests(false);
-    }
+  const handleGuestSubmit = (guest) => {
+    setGuests((currentGuests) => [guest, ...currentGuests]);
   };
 
-  const handleGuestSubmit = async (guest) => {
-    await applyGuestMutation(() => createGuestRequest(guest));
+  const confirmGuest = (guestId) => {
+    setGuests((currentGuests) =>
+      currentGuests.map((guest) =>
+        guest.id === guestId
+          ? { ...guest, status: 'confirmed', confirmedAt: new Date().toISOString() }
+          : guest,
+      ),
+    );
   };
 
-  const confirmGuest = async (guestId) => {
-    await applyGuestMutation(() => updateGuestStatusRequest(guestId, 'confirmed'));
+  const revertGuestToPending = (guestId) => {
+    setGuests((currentGuests) =>
+      currentGuests.map((guest) =>
+        guest.id === guestId
+          ? { ...guest, status: 'pending', confirmedAt: null }
+          : guest,
+      ),
+    );
   };
 
-  const revertGuestToPending = async (guestId) => {
-    await applyGuestMutation(() => updateGuestStatusRequest(guestId, 'pending'));
-  };
-
-  const deleteGuest = async (guestId) => {
-    await applyGuestMutation(() => deleteGuestRequest(guestId));
+  const deleteGuest = (guestId) => {
+    setGuests((currentGuests) => currentGuests.filter((guest) => guest.id !== guestId));
   };
 
   const openAdminModal = () => {
@@ -118,9 +88,6 @@ function App() {
           onConfirmGuest={confirmGuest}
           onRevertGuest={revertGuestToPending}
           onDeleteGuest={deleteGuest}
-          isLoadingGuests={isLoadingGuests}
-          isSyncingGuests={isSyncingGuests}
-          guestError={guestError}
         />
       </>
     );
@@ -217,9 +184,6 @@ function App() {
       <ConfirmationSection
         guests={sortedGuests}
         onGuestSubmit={handleGuestSubmit}
-        isLoadingGuests={isLoadingGuests}
-        isSyncingGuests={isSyncingGuests}
-        guestError={guestError}
       />
       </ScrollReveal>
 
