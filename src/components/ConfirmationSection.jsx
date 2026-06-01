@@ -3,11 +3,11 @@ import { Clock3, UserPlus2 } from 'lucide-react';
 import PrimaryButton from './PrimaryButton';
 import { createGuest, getGuestNameKey, normalizeGuestName } from '../utils/guestStorage';
 
-const ConfirmationSection = ({ guests, onGuestSubmit }) => {
+const ConfirmationSection = ({ guests, onGuestSubmit, isLoadingGuests, isSyncingGuests, guestError }) => {
   const [guestName, setGuestName] = useState('');
   const [feedback, setFeedback] = useState('');
 
-  const handleGuestSubmit = (event) => {
+  const handleGuestSubmit = async (event) => {
     event.preventDefault();
     const normalizedName = normalizeGuestName(guestName);
 
@@ -31,9 +31,13 @@ const ConfirmationSection = ({ guests, onGuestSubmit }) => {
       return;
     }
 
-    onGuestSubmit(createGuest(normalizedName));
-    setGuestName('');
-    setFeedback('Solicitud enviada. Quedaste en espera de confirmación.');
+    try {
+      await onGuestSubmit(createGuest(normalizedName));
+      setGuestName('');
+      setFeedback('Solicitud enviada. Quedaste en espera de confirmación.');
+    } catch (error) {
+      setFeedback(error.message || 'No se pudo enviar la solicitud.');
+    }
   };
 
   return (
@@ -46,10 +50,16 @@ const ConfirmationSection = ({ guests, onGuestSubmit }) => {
               Ingresa tu nombre para enviar tu asistencia. El admin verá tu solicitud y la aprobará desde un panel independiente.
             </p>
             <p className="text-sm text-boda-texto/70 italic max-w-2xl mx-auto">
-              Todo funciona solo en frontend y se guarda en este navegador con localStorage.
+              Las solicitudes quedan compartidas entre dispositivos usando almacenamiento centralizado en Vercel.
             </p>
           </div>
         </div>
+
+        {guestError ? (
+          <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
+            {guestError}
+          </div>
+        ) : null}
 
         <div className="rounded-[40px] border border-boda-verde/20 bg-boda-crema/60 p-8 shadow-sm backdrop-blur-sm">
           <div className="mb-8 flex items-center gap-3 text-boda-oliva-oscuro">
@@ -76,7 +86,11 @@ const ConfirmationSection = ({ guests, onGuestSubmit }) => {
               />
             </label>
 
-            <PrimaryButton text="ENVIAR SOLICITUD" variant="verde" />
+            <PrimaryButton
+              text={isSyncingGuests ? 'ENVIANDO...' : 'ENVIAR SOLICITUD'}
+              variant="verde"
+              disabled={isLoadingGuests || isSyncingGuests}
+            />
           </form>
 
           <div className="mt-6 rounded-[26px] border border-dashed border-boda-oliva-oscuro/15 bg-white/70 p-5 text-left">
@@ -85,17 +99,19 @@ const ConfirmationSection = ({ guests, onGuestSubmit }) => {
               <p className="text-xs font-semibold uppercase tracking-[3px]">Estado</p>
             </div>
             <p className="text-sm leading-relaxed text-boda-texto/80">
-              {feedback || 'Todavía no has enviado ninguna solicitud desde este navegador.'}
+              {feedback || 'Todavía no has enviado ninguna solicitud al listado compartido.'}
             </p>
           </div>
 
           <div className="mt-6 rounded-[30px] border border-white/70 bg-white/80 px-6 py-5 text-left shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[3px] text-boda-oliva-oscuro">
-              Invitados registrados en este navegador
+              Invitados registrados en general
             </p>
             <p className="mt-3 font-serif text-4xl text-boda-oliva-oscuro">{guests.length}</p>
             <p className="mt-2 text-sm text-boda-texto/70">
-              Las solicitudes quedan guardadas localmente y el panel admin las ve en una vista separada.
+              {isLoadingGuests
+                ? 'Cargando invitados compartidos...'
+                : 'Las solicitudes se comparten entre celulares, computadoras y el panel admin.'}
             </p>
           </div>
         </div>

@@ -13,16 +13,41 @@ import ConfirmationSection from './components/ConfirmationSection';
 import AdminAccessButton from './components/AdminAccessButton';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminPanelPage from './components/AdminPanelPage';
-import { readGuests, writeGuests } from './utils/guestStorage';
+import { createGuestRequest, deleteGuestRequest, fetchGuests, mergeLocalGuestsRequest, updateGuestStatusRequest } from './lib/guestApi';
+import { readLegacyLocalGuests, writeLocalGuests } from './utils/guestStorage';
 
 function App() {
-  const [guests, setGuests] = useState(() => readGuests());
+  const [guests, setGuests] = useState([]);
   const [view, setView] = useState(() => (window.location.hash === '#admin' ? 'admin' : 'site'));
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isLoadingGuests, setIsLoadingGuests] = useState(true);
+  const [guestError, setGuestError] = useState('');
+  const [isSyncingGuests, setIsSyncingGuests] = useState(false);
 
   useEffect(() => {
-    writeGuests(guests);
-  }, [guests]);
+    const loadGuests = async () => {
+      setIsLoadingGuests(true);
+
+      try {
+        const remoteGuests = await fetchGuests();
+        const localGuests = readLegacyLocalGuests();
+        const shouldMergeLocalGuests = localGuests.length > 0;
+        const nextGuests = shouldMergeLocalGuests
+          ? await mergeLocalGuestsRequest(localGuests)
+          : remoteGuests;
+
+        setGuests(nextGuests);
+        writeLocalGuests(nextGuests);
+        setGuestError('');
+      } catch (error) {
+        setGuestError(error.message || 'No se pudo cargar la lista compartida de invitados.');
+      } finally {
+        setIsLoadingGuests(false);
+      }
+    };
+
+    loadGuests();
+  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -38,32 +63,37 @@ function App() {
     [guests],
   );
 
-  const handleGuestSubmit = (guest) => {
-    setGuests((currentGuests) => [guest, ...currentGuests]);
+  const applyGuestMutation = async (mutation) => {
+    setIsSyncingGuests(true);
+
+    try {
+      const nextGuests = await mutation();
+      setGuests(nextGuests);
+      writeLocalGuests(nextGuests);
+      setGuestError('');
+      return nextGuests;
+    } catch (error) {
+      setGuestError(error.message || 'No se pudo sincronizar la lista de invitados.');
+      throw error;
+    } finally {
+      setIsSyncingGuests(false);
+    }
   };
 
-  const confirmGuest = (guestId) => {
-    setGuests((currentGuests) =>
-      currentGuests.map((guest) =>
-        guest.id === guestId
-          ? { ...guest, status: 'confirmed', confirmedAt: new Date().toISOString() }
-          : guest,
-      ),
-    );
+  const handleGuestSubmit = async (guest) => {
+    await applyGuestMutation(() => createGuestRequest(guest));
   };
 
-  const revertGuestToPending = (guestId) => {
-    setGuests((currentGuests) =>
-      currentGuests.map((guest) =>
-        guest.id === guestId
-          ? { ...guest, status: 'pending', confirmedAt: null }
-          : guest,
-      ),
-    );
+  const confirmGuest = async (guestId) => {
+    await applyGuestMutation(() => updateGuestStatusRequest(guestId, 'confirmed'));
   };
 
-  const deleteGuest = (guestId) => {
-    setGuests((currentGuests) => currentGuests.filter((guest) => guest.id !== guestId));
+  const revertGuestToPending = async (guestId) => {
+    await applyGuestMutation(() => updateGuestStatusRequest(guestId, 'pending'));
+  };
+
+  const deleteGuest = async (guestId) => {
+    await applyGuestMutation(() => deleteGuestRequest(guestId));
   };
 
   const openAdminModal = () => {
@@ -88,6 +118,9 @@ function App() {
           onConfirmGuest={confirmGuest}
           onRevertGuest={revertGuestToPending}
           onDeleteGuest={deleteGuest}
+          isLoadingGuests={isLoadingGuests}
+          isSyncingGuests={isSyncingGuests}
+          guestError={guestError}
         />
       </>
     );
@@ -181,7 +214,13 @@ function App() {
       </ScrollReveal>
       
       <ScrollReveal>
-      <ConfirmationSection guests={sortedGuests} onGuestSubmit={handleGuestSubmit} />
+      <ConfirmationSection
+        guests={sortedGuests}
+        onGuestSubmit={handleGuestSubmit}
+        isLoadingGuests={isLoadingGuests}
+        isSyncingGuests={isSyncingGuests}
+        guestError={guestError}
+      />
       </ScrollReveal>
 
       <footer className="relative py-12 text-center text-[10px] tracking-[4px] opacity-40 text-boda-oliva-oscuro uppercase">

@@ -4,7 +4,8 @@ const PrimaryButton = ({
   href, 
   onClick, 
   variant = 'terracota', // 'terracota' o 'verde'
-  icon 
+  icon,
+  disabled = false,
 }) => {
   
   // Clases base del botón
@@ -16,7 +17,7 @@ const PrimaryButton = ({
     verde: "bg-boda-verde hover:bg-boda-texto",
   };
 
-  const className = `${baseStyles} ${variants[variant]}`;
+  const className = `${baseStyles} ${variants[variant]} ${disabled ? 'cursor-not-allowed opacity-60 hover:scale-100' : ''}`;
 
   // Si tiene href, se comporta como un enlace externo
   if (href) {
@@ -30,7 +31,7 @@ const PrimaryButton = ({
 
   // Si no, se comporta como un botón normal
   return (
-    <button onClick={onClick} className={className}>
+    <button type="submit" onClick={onClick} className={className} disabled={disabled}>
       {icon}
       {text}
     </button>

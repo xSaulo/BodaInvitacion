@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'boda-marianaymanuel-invitados';
+const LEGACY_STORAGE_KEYS = ['boda-pabloyro-invitados'];
 
-export const readGuests = () => {
+export const readLocalGuests = () => {
   if (typeof window === 'undefined') {
     return [];
   }
@@ -14,7 +15,40 @@ export const readGuests = () => {
   }
 };
 
-export const writeGuests = (guests) => {
+export const readLegacyLocalGuests = () => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const mergedGuests = [];
+    const knownIds = new Set();
+
+    [STORAGE_KEY, ...LEGACY_STORAGE_KEYS].forEach((key) => {
+      const stored = window.localStorage.getItem(key);
+      const parsed = stored ? JSON.parse(stored) : [];
+
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+
+      parsed.forEach((guest) => {
+        if (!guest?.id || knownIds.has(guest.id)) {
+          return;
+        }
+
+        knownIds.add(guest.id);
+        mergedGuests.push(guest);
+      });
+    });
+
+    return mergedGuests;
+  } catch {
+    return [];
+  }
+};
+
+export const writeLocalGuests = (guests) => {
   if (typeof window === 'undefined') {
     return;
   }
