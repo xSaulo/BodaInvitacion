@@ -28,7 +28,7 @@ const GiftSection = () => {
           <p className="text-boda-texto mb-4 break-all font-mono text-sm">0000003100004667479267</p>
           
           <p className="text-[10px] font-bold mb-1 uppercase tracking-widest text-boda-terracota">Alias:</p>
-          <p className="text-boda-texto font-mono text-sm">pablo.rocio.2026</p>
+          <p className="text-boda-texto font-mono text-sm">mariana.manuel.2027</p>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'boda-pabloyro-invitados';
+const STORAGE_KEY = 'boda-marianaymanuel-invitados';
 
 export const readGuests = () => {
   if (typeof window === 'undefined') {
